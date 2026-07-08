@@ -196,9 +196,9 @@ float4 main(PS_IN i) : SV_Target
 	o.xyz = lerp(lerp(ref_fog_far_low_color, ref_fog_start_color, fog_amount), fog_blend_colour, fog_amount);
 
 #if defined(PRERELEASE)
-	float light_luminance = channel_max(light_s);
+	float light_luminance = channel_max(light_s.xyz);
 	
-	o.w = fog_amount * (saturate(light_luminance - 0.5) * 2 + dot(specular_contribution, 0.37)); // TODO: non-HQ won't compile, need to reverse engineer that too
+	o.w = fog_amount * (saturate(light_luminance - 0.5) * 2 + dot(specular_contribution, 0.37));
 #else
 	o.w = pow(saturate(dot(lighting, 0.37) - ref_bloom_threshold) / ((1.0 - ref_bloom_threshold) + 0.0001), 3) * fog_amount;
 #endif

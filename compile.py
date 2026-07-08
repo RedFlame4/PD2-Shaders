@@ -4,7 +4,7 @@ SHADERS = {
     "global_lighting" : [
         {"defines" : []},
         {"defines" : ["HQ"]},
-        {"defines" : ["PRERELEASE"]},
+        #{"defines" : ["PRERELEASE"]}, // TODO
         {"defines" : ["PRERELEASE", "HQ"]},
     ],
     "omni" : [
@@ -22,14 +22,14 @@ SHADERS = {
         {"defines" : ["HQ", "PROJECTION"]},
         {"defines" : ["HQ", "SPECULAR"]},
         {"defines" : ["HQ", "PROJECTION", "SPECULAR"]},
+        {"defines" : ["INVSQ"]},
+        {"defines" : ["HQ", "INVSQ", "PROJECTION"]},
+        {"defines" : ["HQ", "INVSQ", "SPECULAR"]},
+        {"defines" : ["HQ", "INVSQ", "PROJECTION", "SPECULAR"]},
         {"defines" : ["PRERELEASE"]},
         {"defines" : ["PRERELEASE", "HQ", "PROJECTION"]},
         {"defines" : ["PRERELEASE", "HQ", "SPECULAR"]},
         {"defines" : ["PRERELEASE", "HQ", "PROJECTION", "SPECULAR"]},
-        {"path" : "spot.default.INVSQ.orig", "defines" : ["INVSQ"]},
-        {"path" : "spot.default.HQ.INVSQ.PROJECTION.orig", "defines" : ["HQ", "INVSQ", "PROJECTION"]},
-        {"path" : "spot.default.HQ.INVSQ.PROJECTION.SPECULAR.orig", "defines" : ["HQ", "INVSQ", "PROJECTION", "SPECULAR"]},
-        {"path" : "spot.default.HQ.INVSQ.SPECULAR.orig", "defines" : ["HQ", "INVSQ", "SPECULAR"]},
     ],
     "post_contour_mask" : [
         {"defines" : []},
