@@ -58,13 +58,24 @@ float4 main(PS_IN i) : SV_Target
 		clip(light_amount - 1E-05); // unlit
 	#endif
 
-	float3 lighting = albedo_s * light_amount;
+	#if defined(PRERELEASE)
+		float3 lighting = (albedo_s * albedo_s) * light_amount;
+	#else
+		float3 lighting = albedo_s * light_amount;
+	#endif
 
-	#if defined(SPECULAR) || defined(PROJECTION)
+	#if defined(SPECULAR) || defined(PROJECTION) // vanilla oddity, projection lights always have specular
 		float3 look_vector = normalize(camera_world_matrix[i.eye]._m30_m31_m32 - world_pos);
-		float3 specular_color = specular(normalize(light_dir + look_vector), normal_s) * (1 + saturate(ref_light_falloff_exponent - 1) * 0.33);
+		float3 half_vector = normalize(light_dir + look_vector);
+		float3 specular_color = specular(half_vector, normal_s);
 
-		#if defined(PROJECTION)
+		#if defined(PRERELEASE)
+			specular_color *= ref_light_falloff_exponent;
+		#else
+			specular_color *= (1 + saturate(ref_light_falloff_exponent - 1) * 0.33);
+		#endif
+
+		#if defined(SPECULAR) && defined(PROJECTION)
 			float4 sample_pos;
 			sample_pos.xyz = reflect(look_vector, normal_s.xyz);
 			sample_pos.w = (1.0 - normal_s.w) * 4.0;
@@ -72,7 +83,11 @@ float4 main(PS_IN i) : SV_Target
 			specular_color += ref_light_texture.SampleLevel(ref_light_texture_sampler, sample_pos.xyz, sample_pos.w).xyz;
 		#endif
 
-		lighting += specular_color * dot(pow(normal_s.ww, 2), light_amount.xx);
+		#if defined(PRERELEASE)
+			lighting += specular_color * (pow(normal_s.w, 2) * light_amount);
+		#else
+			lighting += specular_color * dot(pow(normal_s.ww, 2), light_amount.xx);
+		#endif
 	#endif
 
 	lighting *= ref_light_color;

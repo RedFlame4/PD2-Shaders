@@ -56,25 +56,45 @@ float4 main(PS_IN i) : SV_Target
 	float light_amount = range_step * sqrt(falloff_amount);
 
 	float spot_angle = 1 - dot(-light_dir, ref_light_direction);
-	light_amount *= saturate(1 - (spot_angle / ref_spot_angle_falloff));
 
+	light_amount *= saturate(1 - (spot_angle / ref_spot_angle_falloff));
 	light_amount *= saturate(dot(light_dir, normal_s.xyz));
 
 	clip(light_amount - 1E-05); // unlit
 
+#if defined(PRERELEASE)
+	float3 lighting = (albedo_s * albedo_s) * light_amount;
+#else
 	float3 lighting = albedo_s * light_amount;
+#endif
 
 	#if defined(SPECULAR)
 		float3 look_vector = normalize(camera_world_matrix[i.eye]._m30_m31_m32 - world_pos);
-		float specular_color = specular(normalize(light_dir + look_vector), normal_s) * (1 + saturate(ref_light_falloff_exponent - 1) * 0.33);
-		specular_color *= dot(pow(normal_s.ww, 2), light_amount.xx);
+		float3 half_vector = normalize(light_dir + look_vector);
+		float specular_color = specular(half_vector, normal_s);
+
+		#if defined(PRERELEASE)
+			specular_color *= ref_light_falloff_exponent;
+		#else
+			specular_color *= (1 + saturate(ref_light_falloff_exponent - 1) * 0.33);
+		#endif
+
+		#if defined(PRERELEASE)
+			specular_color *= pow(normal_s.w, 2) * light_amount;
+		#else
+			specular_color *= dot(pow(normal_s.ww, 2), light_amount.xx);
+		#endif
 
 		lighting += specular_color.xxx;
 	#endif
 
 	#if defined(PROJECTION)
 		float2 light_uv = (mul(light_dir, ref_light_matrix).xy * ref_spot_projection_scale) * 0.5 + 0.5;
-		lighting *= ref_light_texture.Sample(ref_light_texture_sampler, light_uv).xyz * 2;
+		#if defined(PRERELEASE)
+			lighting *= ref_light_texture.Sample(ref_light_texture_sampler, light_uv).xyz;
+		#else
+			lighting *= ref_light_texture.Sample(ref_light_texture_sampler, light_uv).xyz * 2;
+		#endif
 	#endif
 
 	lighting *= ref_light_color;

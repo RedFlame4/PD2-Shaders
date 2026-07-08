@@ -12,6 +12,14 @@ inline float3 decode_world_pos(float4 p, float depth, float4x4 camera_world) {
 
 inline float4 decode_signed_normal(float4 normal) {
 	normal.xyz = (normal.xyz * 2) - 1;
-	
+
 	return normal;
+}
+
+inline float channel_sum(float3 c) {
+	return c.x + c.y + c.z;
+}
+
+inline float channel_max(float3 c) {
+	return max(max(c.x, c.y), c.z);
 }
