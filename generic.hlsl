@@ -121,8 +121,7 @@ cbuffer Globals : register(b0)
 	// "translation lives in the last column" layout). Needs explicit row_major:
 	// HLSL's default cbuffer matrix packing is column-major, which packs
 	// _m03/_m13/_m23 into one register (a whole column) instead of one per row -
-	// same value, wrong instructions. Array size is a guess (not dump-verified)
-	// since we don't try to match the real cbuffer layout.
+	// same value, wrong instructions.
 	row_major float4x4 ref_environment_settings[2];
 #endif
 };
@@ -407,38 +406,37 @@ PS_OUT main(PS_IN i)
 #endif
 
 #if defined(DIFFUSE_TEXTURE)
-	#if defined(ALPHA_MASKED)
-	// Threshold is shared by whichever alpha source below actually applies.
-	#if defined(EXTERNAL_ALPHA_REF)
-	float alpha_threshold = ref_alpha_ref;
-	#else
-	float alpha_threshold = 0.00390625;
-	#endif
-
-	// Alpha source priority: OPACITY_TEXTURE (own texture/UV set, sampled and tested
-	// before diffuse_texture is even sampled) > GSMA_ALPHA_MASKING (material_texture's
-	// alpha channel, see material_s above - lands in .w when all 4 channels were
-	// sampled for the GLOSS_BLURS_CUBEMAP case, .z otherwise) > plain diffuse alpha.
-	#if defined(OPACITY_TEXTURE)
-	float alpha_s = opacity_texture.Sample(opacity_texture_sampler, i.opacity_uv).x;
-	#elif defined(GSMA_TEXTURE) && defined(GSMA_ALPHA_MASKING)
-	#if defined(CUBE_ENVIRONMENT_MAPPING) && defined(GLOSS_BLURS_CUBEMAP)
-	float alpha_s = material_s.w;
-	#else
-	float alpha_s = material_s.z;
-	#endif
-	#endif
-	#endif
-
 	float4 diffuse_s = diffuse_texture.Sample(diffuse_texture_sampler, uv);
+
 	#if defined(ALPHA_MASKED)
-	#if !defined(OPACITY_TEXTURE) && !(defined(GSMA_TEXTURE) && defined(GSMA_ALPHA_MASKING))
-	float alpha_s = diffuse_s.w;
+		// Threshold is shared by whichever alpha source below actually applies.
+		#if defined(EXTERNAL_ALPHA_REF)
+			float alpha_threshold = ref_alpha_ref;
+		#else
+			float alpha_threshold = 0.00390625;
+		#endif
+
+		// Alpha source priority: OPACITY_TEXTURE (own texture/UV set) > GSMA_ALPHA_MASKING
+		// (material_texture's alpha channel, see material_s above - lands in .w when all 4
+		// channels were sampled for the GLOSS_BLURS_CUBEMAP case, .z otherwise) > plain
+		// diffuse alpha (diffuse_s.w, already sampled above regardless of which source wins).
+		#if defined(OPACITY_TEXTURE)
+			float alpha_s = opacity_texture.Sample(opacity_texture_sampler, i.opacity_uv).x;
+		#elif defined(GSMA_TEXTURE) && defined(GSMA_ALPHA_MASKING)
+			#if defined(CUBE_ENVIRONMENT_MAPPING) && defined(GLOSS_BLURS_CUBEMAP)
+				float alpha_s = material_s.w;
+			#else
+				float alpha_s = material_s.z;
+			#endif
+		#else
+			float alpha_s = diffuse_s.w;
+		#endif
+
+		if (alpha_s < alpha_threshold) {
+			discard;
+		}
 	#endif
-	if (alpha_s < alpha_threshold) {
-		discard;
-	}
-	#endif
+
 	#if defined(CUBE_ENVIRONMENT_MAPPING) && !defined(NORMALMAP)
 		// The reflection contribution is only added to albedo at the very end (after
 		// SIMPLE_TINT/VERTEX_COLOR) - it's not itself tinted/vertex-colored, only the
