@@ -180,12 +180,7 @@ float4 main(PS_IN i) : SV_Target
 
 	// FOG
 	float fog_amount = 1 - clamp((depth_s - ref_fog_min_range) / ref_fog_max_range, 0, ref_fog_max_density);
-
-#if defined(PRERELEASE)
 	fog_amount = pow(fog_amount, 4);
-#else
-	fog_amount = pow(fog_amount, 3);
-#endif
 
 #if defined(PRERELEASE)
 	float3 fog_blend_colour = lighting * 1.035;

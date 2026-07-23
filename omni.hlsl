@@ -1,6 +1,9 @@
 #include "include/common.hlsl"
 #include "include/lighting.hlsl"
 
+// This shader intentionally diverges from the original source
+// to implement optimisations and fixes
+
 Texture2D normal;
 Texture2D depth;
 TextureCube ref_light_texture;
@@ -35,8 +38,6 @@ float4 main(PS_IN i) : SV_Target
 {
 	float2 screen_uv = i.texcoord.xy / i.texcoord.ww;
 	float depth_s = depth.Sample(depth_sampler, screen_uv).x;
-	float3 albedo_s = albedo.Sample(albedo_sampler, screen_uv).xyz;
-	float4 normal_s = decode_signed_normal(normal.Sample(normal_sampler, screen_uv));
 
 	float3 world_pos = decode_world_pos(i.texcoord1, depth_s, camera_world_matrix[i.eye]);
 
@@ -44,9 +45,13 @@ float4 main(PS_IN i) : SV_Target
 	float light_len = length(light_dir);
 	float falloff_amount = saturate(1 - light_len * ref_light_falloff);
 
+	clip(falloff_amount - 1E-05); // out of range
+
 	light_dir /= light_len;// + 0.0001f;
 
-	float light_amount = saturate(dot(light_dir, normal_s.xyz) * falloff_amount);
+	float4 normal_s = decode_signed_normal(normal.Sample(normal_sampler, screen_uv));
+
+	float light_amount = saturate(dot(light_dir, normal_s.xyz)) * falloff_amount;
 
 	clip(light_amount - 1E-05); // unlit
 
@@ -57,6 +62,8 @@ float4 main(PS_IN i) : SV_Target
 
 		clip(light_amount - 1E-05); // unlit
 	#endif
+
+	float3 albedo_s = albedo.Sample(albedo_sampler, screen_uv).xyz;
 
 	#if defined(PRERELEASE)
 		float3 lighting = (albedo_s * albedo_s) * light_amount;

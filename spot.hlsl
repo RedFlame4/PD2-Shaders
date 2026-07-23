@@ -1,6 +1,9 @@
 #include "include/common.hlsl"
 #include "include/lighting.hlsl"
 
+// This shader intentionally diverges from the original source
+// to implement optimisations and fixes
+
 Texture2D normal;
 Texture2D depth;
 Texture2D albedo;
@@ -54,8 +57,6 @@ float4 main(PS_IN i) : SV_Target
 {
 	float2 screen_uv = i.texcoord.xy / i.texcoord.ww;
 	float depth_s = depth.Sample(depth_sampler, screen_uv).x;
-	float3 albedo_s = albedo.Sample(albedo_sampler, screen_uv).xyz;
-	float4 normal_s = decode_signed_normal(normal.Sample(normal_sampler, screen_uv));
 
 	float3 world_pos = decode_world_pos(i.texcoord1, depth_s, camera_world_matrix[i.eye]);
 
@@ -87,9 +88,15 @@ float4 main(PS_IN i) : SV_Target
 	light_amount *= saturate(1 - (spot_angle / ref_spot_angle_falloff));
 #endif
 
+	clip(light_amount - 1E-05); // out of range / outside cone
+
+	float4 normal_s = decode_signed_normal(normal.Sample(normal_sampler, screen_uv));
+
 	light_amount *= saturate(dot(light_dir, normal_s.xyz));
 
 	clip(light_amount - 1E-05); // unlit
+
+	float3 albedo_s = albedo.Sample(albedo_sampler, screen_uv).xyz;
 
 #if defined(PRERELEASE)
 	float3 lighting = (albedo_s * albedo_s) * light_amount;
